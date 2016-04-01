@@ -42,13 +42,21 @@ c = Client(base_url= url, tls=tls_config)
 
 ports = c.inspect_container(args.container)['NetworkSettings']['Ports']
 
-for portinfo in ports:
+for portinfo, portdetails in ports.iteritems():
     if ports[portinfo] is not None:
-        [port, proto] = portinfo.split("/")
-        rulename = proto + "-port" + port
+        [internal_port, proto] = portinfo.split("/")
+
+        # Catch external port instead of internal
+        external_port =''
+        if ports[portinfo][0]['HostPort'] is not None:
+            external_port = ports[portinfo][0]['HostPort']
+        else:
+            external_port = internal_port
+
+        rulename = proto + "-port" + external_port
 
         if args.action == 'add':
-            natrule = rulename + "," + proto + ",," + port + ",," + port
+            natrule = rulename + "," + proto + ",," + external_port + ",," + external_port
             natcmd = 'VBoxManage controlvm "default" natpf1 ' + '""' + natrule + '""'
             print "NATRULE: " + natrule
             subprocess.call(natcmd, shell=True)
